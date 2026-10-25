@@ -1,0 +1,101 @@
+# Backend: FastAPI payment API (2 replicas), reachable only inside the cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capstone-deployment
+  labels:
+    app: capstone
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: capstone
+        tier: backend
+    spec:
+      containers:
+        - name: payment-api
+          image: payment-backend:capstone
+          imagePullPolicy: Never   # image is loaded with `minikube image load`
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: capstone-backend
+  labels:
+    app: capstone
+    tier: backend
+spec:
+  type: ClusterIP
+  # Demo data is in memory per replica, so keep the frontend's requests on one replica.
+  sessionAffinity: ClientIP
+  selector:
+    tier: backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+# Frontend: nginx serves the dashboard and proxies /api and /health to capstone-backend,
+# so the browser never needs the cluster-internal DNS name.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capstone-frontend
+  labels:
+    app: capstone
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: capstone
+        tier: frontend
+    spec:
+      containers:
+        - name: payment-dashboard
+          image: payment-frontend:capstone
+          imagePullPolicy: Never
+          env:
+            - name: BACKEND_URL
+              value: http://capstone-backend:8000
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: capstone-nodeport
+  labels:
+    app: capstone
+    tier: frontend
+spec:
+  type: NodePort
+  selector:
+    tier: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30099

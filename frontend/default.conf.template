@@ -1,0 +1,20 @@
+# Rendered by the nginx image at startup: ${BACKEND_URL} is replaced from the environment.
+# The browser only ever talks to this server; /api and /health are proxied to the backend,
+# so no backend address (or Kubernetes DNS name) is needed in the browser.
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+
+    location / {
+        try_files $uri /index.html;
+    }
+
+    location /api/ {
+        proxy_pass ${BACKEND_URL};
+        proxy_set_header Host $host;
+    }
+
+    location = /health {
+        proxy_pass ${BACKEND_URL};
+    }
+}

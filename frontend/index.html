@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment & Notification Engine</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Payment &amp; Notification Engine</h1>
+    <span id="health" class="badge">Checking backend…</span>
+  </header>
+
+  <main>
+    <section class="cards">
+      <div class="card"><span>Total payments</span><strong id="stat-count">–</strong></div>
+      <div class="card"><span>Completed</span><strong id="stat-completed">–</strong></div>
+      <div class="card"><span>Pending / failed</span><strong id="stat-other">–</strong></div>
+    </section>
+
+    <section class="panel">
+      <h2>New payment</h2>
+      <form id="pay-form">
+        <input name="payer" placeholder="Payer" required>
+        <input name="payee" placeholder="Payee" required>
+        <input name="amount" type="number" step="0.01" min="0.01" placeholder="Amount" required>
+        <select name="currency"><option>INR</option><option>USD</option><option>EUR</option></select>
+        <button type="submit">Send</button>
+      </form>
+      <p id="form-msg" class="msg"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Payments</h2>
+      <table>
+        <thead><tr><th>#</th><th>Payer</th><th>Payee</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody id="payments"><tr><td colspan="5">Loading…</td></tr></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>Notifications</h2>
+      <ul id="notifications"><li>Loading…</li></ul>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
