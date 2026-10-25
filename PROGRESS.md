@@ -42,13 +42,32 @@ The application (backend, frontend, tests, Compose) was added at the user's requ
 ## Phase 1 — Files (DONE)
 All files listed above were created and their contents verified.
 
-## Phase 2 — Git (DEFERRED BY USER)
-The user will do the commits and branching at the end. Claude runs no Git mutations. `.gitignore` excludes `capstone.env`, Terraform state, `.terraform/`, `.venv/` and caches.
+## Phase 2 — Git (DONE by the user; verified read-only by Claude)
+- Remote: https://github.com/Shivam-Kapure/capstone-simple.git
+- `git log --graph --all`:
+  - `f7fb5eb (HEAD -> main, tag: v1.0.0-final, origin/release-v1.0, origin/main, release-v1.0) chore: finalize release v1.0`
+  - parent `2ce686e feat: payment and notification engine ...`
+- The merge of `release-v1.0` into `main` was a fast-forward.
+- `v1.0.0-final` is an annotated tag (`git cat-file -t` gives `tag`), with message "Final Capstone Release".
+- `git ls-remote origin` shows `refs/heads/main`, `refs/heads/release-v1.0` and `refs/tags/v1.0.0-final` on GitHub.
+- `git status`: `nothing to commit, working tree clean`.
+- `version.txt` = `v1.0-prod-bundle` (ASCII, CRLF).
+- None of `capstone.env`, `*.tfstate`, `.terraform/` or `.venv` is tracked.
 
-## Phase 3 — Jira (AWAITING USER)
-UI steps were given to the user. Claude makes no Jira changes.
+## Phase 3 — Jira (DONE by the user, reported by the user)
+The user reports the sprint is complete with all three tasks Done. Claude has no Jira access and made no Jira changes. The evidence is the user's burndown and sprint report screenshot.
 
-## Phase 4 — Jenkins (PENDING: needs the GitHub repo)
+## Phase 4 — Jenkins (DONE)
+- The user created the job `capstone-simple-pipeline` (Pipeline script from SCM, Git, `*/main`, `Jenkinsfile`).
+- Build #1 result on disk: SUCCESS. Console Output (provided by the user):
+  - Checked out `f7fb5eb`.
+  - Build & Test: `9 passed`, then `Building Payment and Notification Services... Test PASSED`.
+  - Docker Packaging: built and inspected `payment-engine:capstone`, `payment-backend:capstone` and `payment-frontend:capstone`.
+  - Deploy Cluster: `Applying Kubernetes Deployment manifests to cluster...`
+  - Post: `.ci-venv` removed.
+  - Ended with `Finished: SUCCESS`.
+
+### Jenkinsfile design
 - The Jenkinsfile uses `bat` steps, because Jenkins runs on Windows.
 - **Build & Test:**
   - Creates `.ci-venv`, installs `backend\requirements-dev.txt`, runs `pytest -v`, then prints `Building Payment and Notification Services... Test PASSED`.
@@ -59,7 +78,6 @@ UI steps were given to the user. Claude makes no Jira changes.
 - **Deploy Cluster:** prints `Applying Kubernetes Deployment manifests to cluster...`.
 - **`post { always }`:** removes `.ci-venv`. This is a post block, not a stage.
 - Local dry run of the Build & Test commands in `cmd`: 9 passed, exit 0, and `.ci-venv` was removed.
-- The job `capstone-simple-pipeline` has not been created or run yet.
 
 ## Phase 5 — Docker (DONE)
 - Images:
@@ -120,4 +138,23 @@ UI steps were given to the user. Claude makes no Jira changes.
   - Negative test with `-e app_url=http://localhost:38999`: the health task fails with "Connection refused", `failed=1`, exit 2. So the playbook really fails when the app is down.
   - Why `app_url` defaults to the Compose frontend (`localhost:38080`): from WSL, the Minikube tunnel (127.0.0.1:54772, Windows-only) and the node IP 192.168.58.2:30099 are both unreachable (curl gives 000). The Docker Desktop published port 38080 is reachable, and it serves the same frontend and backend images.
 
-## Phase 8 — Final verification (PENDING Git, Jira, Jenkins)
+## Phase 8 — Final verification (DONE)
+Live re-check at the end:
+- `capstone-deployment` 2/2 and `capstone-frontend` 1/1; all 3 pods Running with 0 restarts.
+- `capstone-nodeport` is `80:30099/TCP`.
+- Tunnel `http://127.0.0.1:54772/health` → 200. Compose `http://localhost:38080/health` → 200.
+- `payment-live` shows `Exited (0)`.
+
+| Case-study task | Status |
+|---|---|
+| 1 Git: release branch, commit, merge, tag, push | PASS (verified read-only) |
+| 2 Jira: sprint complete, tickets Done, burndown | PASS (reported by the user; screenshot is the evidence) |
+| 3 Jenkins: declarative pipeline builds, tests, packages | PASS (build #1 SUCCESS) |
+| 4 Docker: build, tag, run, verify | PASS |
+| 5 Kubernetes: frontend + backend, NodePort 30099 | PASS (reachable through the minikube tunnel; `localhost:30099` is not reachable on Windows with the Docker driver) |
+| 6 Terraform + Ansible playbook | PASS |
+
+Remaining limitations:
+- The tunnel URL changes every run and needs its terminal open.
+- Demo data is in memory, per backend replica.
+- The Jenkins "Deploy Cluster" stage only prints its message, as the case study specifies.
